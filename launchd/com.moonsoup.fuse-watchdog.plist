@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchDaemon template for fuse-watchdog. Runs as root (needs mount/unmount +
+  raw device reads). Edit the two paths below to match your checkout and config,
+  copy to /Library/LaunchDaemons/, then:  sudo launchctl load <plist>
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.moonsoup.fuse-watchdog</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>-m</string>
+        <string>fuse_watchdog</string>
+        <string>--config</string>
+        <string>/Users/isme/Software/Drivers/fuse-watchdog/config.json</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/isme/Software/Drivers/fuse-watchdog</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/isme/Software/Drivers/fuse-watchdog/fuse-watchdog.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/isme/Software/Drivers/fuse-watchdog/fuse-watchdog.err.log</string>
+</dict>
+</plist>

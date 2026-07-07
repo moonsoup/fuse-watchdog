@@ -1,0 +1,14 @@
+{
+  "mount_point": "/Users/isme/DockProjects",
+  "sentinel": "/Users/isme/DockProjects",
+  "disk": "/dev/disk4",
+  "device": "/dev/disk4s2",
+  "fs_uuid": "9d5cd7d1-2ed6-4123-ade8-c807e49b7e8c",
+  "driver_path": "/Users/isme/Software/Drivers/fuse-ext2/fuse-ext2/fuse-ext2",
+  "mount_options": "rw+,allow_other,local,no_default_permissions,uid=501,gid=20",
+  "governor_mib": 32,
+  "poll_interval": 3.0,
+  "settle": 2.0,
+  "max_recover_attempts": 3,
+  "log_path": "/Users/isme/Software/Drivers/fuse-watchdog/fuse-watchdog.log"
+}
