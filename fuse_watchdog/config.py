@@ -9,6 +9,7 @@ DEFAULTS = {
     "mount_options": "rw+,allow_other,local,no_default_permissions",
     "governor_mib": 32,             # opt-in writeback governor bound
     "poll_interval": 3.0,           # seconds between health probes
+    "probe_timeout_secs": 10.0,     # bound on a single probe; wedged mount -> STALE, not a hang
     "settle": 2.0,                  # seconds to wait after unmount/remount
     "max_recover_attempts": 3,      # consecutive failed recoveries before giving up
     "log_path": None,               # None -> stderr

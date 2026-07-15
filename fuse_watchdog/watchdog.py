@@ -5,7 +5,7 @@ loop's control flow is fully unit-testable with scripted probes.
 """
 import time
 
-from .probe import Health, needs_recovery, probe_mount
+from .probe import Health, needs_recovery, probe_mount_bounded
 
 
 def run_loop(cfg, log, probe_fn=None, recover_fn=None, sleep=time.sleep,
@@ -17,7 +17,9 @@ def run_loop(cfg, log, probe_fn=None, recover_fn=None, sleep=time.sleep,
     the problem is beyond software (hardware / wrong disk) and a human is needed.
     """
     if probe_fn is None:
-        probe_fn = lambda: probe_mount(cfg.mount_point)  # noqa: E731
+        # Bounded (see probe_mount_bounded) -- a probe that hangs on a wedged
+        # mount must not hang this whole loop forever along with it.
+        probe_fn = lambda: probe_mount_bounded(cfg.mount_point, cfg.probe_timeout_secs)  # noqa: E731
     if recover_fn is None:
         raise ValueError("recover_fn is required")
 

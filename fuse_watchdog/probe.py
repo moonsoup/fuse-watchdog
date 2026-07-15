@@ -6,6 +6,8 @@ decision table is unit-testable without a real device.
 import enum
 import errno
 import os
+import queue
+import threading
 
 
 class Health(enum.Enum):
@@ -69,3 +71,42 @@ def probe_mount(mount_point, statfn=os.stat, listfn=os.listdir):
 def needs_recovery(health):
     """True for any non-OK state the watchdog should act on. Pure."""
     return health in (Health.DROPPED, Health.STALE, Health.UNMOUNTED)
+
+
+def probe_mount_bounded(mount_point, timeout_secs, probe_fn=None):
+    """Same result shape as probe_mount, but bounded: if the underlying probe
+    doesn't return within timeout_secs, treat it as Health.STALE instead of
+    blocking forever.
+
+    Without this, a mount wedged in an uninterruptible KERNEL I/O wait (the
+    documented "frozen-session hazard" — distinct from a cleanly-dropped
+    device, which surfaces ENXIO/ENODEV promptly) hangs os.stat()/os.listdir()
+    indefinitely. That would hang THIS watchdog's own poll loop forever too —
+    exactly the scenario a supervisor process must never get stuck in, since
+    nothing else would then notice or recover the mount.
+
+    Runs probe_fn in a daemon thread and waits at most timeout_secs via a
+    Queue. A signal-based timeout can't work here: a thread genuinely blocked
+    in an uninterruptible kernel wait does not process signals until the
+    syscall returns. Using daemon=True (not concurrent.futures.
+    ThreadPoolExecutor, whose worker threads register an atexit handler that
+    WAITS for them) means a truly stuck probe thread is simply abandoned —
+    it can't block process exit or later polls, it's just leaked until (if
+    ever) the underlying syscall returns, at which point its result is
+    silently discarded into a queue nothing is reading anymore.
+    """
+    if probe_fn is None:
+        probe_fn = lambda: probe_mount(mount_point)  # noqa: E731
+    result_q = queue.Queue(maxsize=1)
+
+    def _worker():
+        try:
+            result_q.put(probe_fn())
+        except Exception:
+            result_q.put((Health.STALE, None))
+
+    threading.Thread(target=_worker, daemon=True).start()
+    try:
+        return result_q.get(timeout=timeout_secs)
+    except queue.Empty:
+        return Health.STALE, None
