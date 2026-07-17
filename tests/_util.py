@@ -14,6 +14,8 @@ class FakeCfg:
     settle = 0
     poll_interval = 0
     max_recover_attempts = 3
+    uuid_read_retries = 0  # 0 -> exactly one attempt, matching pre-retry test behavior
+    uuid_read_retry_delay = 0
 
     def mount_command(self):
         return ["env", "FUSE_EXT2_WB_NORMAL_MIB=32", "/drv/fuse-ext2",

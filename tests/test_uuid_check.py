@@ -62,6 +62,31 @@ class TestUuid(unittest.TestCase):
     def test_matches_empty_expected(self):
         self.assertFalse(U.uuid_matches("/dev/x", "", reader=lambda d: self.USTR))
 
+    def test_diagnostic_ok(self):
+        img = make_superblock_device(self.UHEX)
+        uuid, reason = U.read_device_uuid_diagnostic("/dev/x", opener=opener_for(img))
+        self.assertEqual(uuid, self.USTR)
+        self.assertEqual(reason, "ok")
+
+    def test_diagnostic_not_ext4_reports_the_bad_magic_bytes(self):
+        img = make_superblock_device(self.UHEX, magic=0x1234)
+        uuid, reason = U.read_device_uuid_diagnostic("/dev/x", opener=opener_for(img))
+        self.assertIsNone(uuid)
+        self.assertTrue(reason.startswith("not_ext4_magic:"))
+
+    def test_diagnostic_os_error_reports_the_real_error(self):
+        def boom(_p, _m):
+            raise OSError(errno.ENXIO, "Device not configured")
+        uuid, reason = U.read_device_uuid_diagnostic("/dev/x", opener=boom)
+        self.assertIsNone(uuid)
+        self.assertTrue(reason.startswith("os_error:"))
+        self.assertIn("Device not configured", reason)
+
+    def test_read_device_uuid_delegates_to_diagnostic(self):
+        """The original single-value function must keep working unchanged."""
+        img = make_superblock_device(self.UHEX)
+        self.assertEqual(U.read_device_uuid("/dev/x", opener=opener_for(img)), self.USTR)
+
 
 if __name__ == "__main__":
     unittest.main()

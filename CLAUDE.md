@@ -23,10 +23,11 @@ doesn't match the configured `fs_uuid`. `recover()` gates the mount command on
   + `probe_mount` using st_dev mount-detection + a forced listdir to surface drops).
 - `fuse_watchdog/uuid_check.py` — read/parse ext4 UUID from the raw device (pure
   parse + injectable reader).
-- `fuse_watchdog/recover.py` — recovery sequence via an injected `Runner`.
+- `fuse_watchdog/recover.py` — recovery sequence via an injected `Runner`; takes an opt-in
+  `fsck` flag (runs `e2fsck -y` after unmount, before the UUID gate — never bypasses it).
 - `fuse_watchdog/watchdog.py` — the poll loop (DI: probe_fn/recover_fn/sleep).
-- `fuse_watchdog/config.py`, `cli.py`, `__main__.py`.
-- `tests/` — 31 tests, all side effects injected (no hardware needed).
+- `fuse_watchdog/config.py`, `cli.py` (`--recover-once --fsck`), `__main__.py`.
+- `tests/` — 41 tests, all side effects injected (no hardware needed).
 
 ## How to run / test
 
@@ -38,6 +39,23 @@ sudo python3 -m fuse_watchdog --config config.json --check
 
 ## Status / next
 
-MVP complete and green (2026-07-06). Not yet exercised against a live drop on
-real hardware — validate once the reliable enclosure (Inateck ASM1153E) arrives,
-or by deliberately yanking a test USB. See `../` migration memory for context.
+MVP complete and green (2026-07-06). The original flaky-dock trigger this tool
+was built for (a JMicron Bulk-Only-Transport bridge dropping the link under
+load) is resolved: the Inateck ASM1153E (UASP) enclosure has been in use for
+~2 weeks as of 2026-07-17 and that specific drop pattern has not recurred.
+
+**Open, separate incident (2026-07-17)**: the DockProjects mount still dropped
+(`ENXIO`) overnight on the *new* enclosure, staying dead for several hours and
+causing real projectMan instability. Since the known JMicron-bridge cause is
+already fixed, this is presumed a **different** root cause, not yet
+identified — do not assume it's the old flaky-dock pattern. Follow-up
+diagnostic work (separate from this repo's own code) should check what's
+actually behind `/dev/disk4` now, whether the drop correlates with system
+load/power events, and whether it's a repeat occurrence, before concluding
+anything about the new hardware.
+
+Being integrated into projectMan as an observe-only plugin (poll + surface
+status + human-triggered remount with an optional `--fsck` step) — see
+projectMan's own plan doc for that work. This tool itself remains the one
+place that actually performs privileged recovery; projectMan's engine only
+triggers it, never reimplements it.

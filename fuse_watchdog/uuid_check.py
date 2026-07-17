@@ -45,19 +45,36 @@ def read_device_uuid(device, opener=open):
     `opener` is injectable for tests. Any OSError (e.g. ENXIO on a dropped
     device) yields None — caller treats "can't confirm UUID" as "do not remount".
     """
+    uuid, _reason = read_device_uuid_diagnostic(device, opener)
+    return uuid
+
+
+def read_device_uuid_diagnostic(device, opener=open):
+    """Same read as read_device_uuid, but returns (uuid_or_none, reason) so a
+    caller can log WHY a read failed, not just that it did.
+
+    Real incident (2026-07-17): a recovery refusal only ever logged "UUID
+    unreadable" with no way to tell whether the raw device open threw an
+    OSError (device genuinely gone/busy) or the open succeeded but the bytes
+    at the expected superblock offset simply weren't the ext4 magic number
+    (wrong partition offset, not ext4, or a stale device node) -- two very
+    different problems requiring different next steps, indistinguishable
+    from the log alone. `reason` is one of: "ok", "os_error:<message>",
+    "not_ext4_magic:<hex bytes found>", "short_read".
+    """
     try:
         with opener(device, "rb") as f:
             f.seek(MAGIC_ABS_OFFSET)
             magic = f.read(2)
             if not superblock_is_ext4(magic):
-                return None
+                return None, f"not_ext4_magic:{magic.hex()}"
             f.seek(UUID_ABS_OFFSET)
             raw = f.read(UUID_LEN)
             if len(raw) != UUID_LEN:
-                return None
-            return parse_uuid(raw)
-    except OSError:
-        return None
+                return None, "short_read"
+            return parse_uuid(raw), "ok"
+    except OSError as e:
+        return None, f"os_error:{e}"
 
 
 def uuid_matches(device, expected_uuid, reader=read_device_uuid):

@@ -13,6 +13,14 @@ DEFAULTS = {
     "settle": 2.0,                  # seconds to wait after unmount/remount
     "max_recover_attempts": 3,      # consecutive failed recoveries before giving up
     "log_path": None,               # None -> stderr
+    # Real incident (2026-07-17): reading the raw device's UUID immediately
+    # after `diskutil unmountDisk force` can transiently fail with EPERM
+    # ("Operation not permitted") even as root -- the OS briefly holds the
+    # device busy right after a forced unmount. The SAME read succeeds fine
+    # a few minutes later. These two settings retry the UUID read
+    # specifically (not the whole recovery cycle) before giving up.
+    "uuid_read_retries": 3,          # extra attempts after the first, on ANY unreadable result
+    "uuid_read_retry_delay": 2.0,    # seconds between UUID-read retries
 }
 
 
